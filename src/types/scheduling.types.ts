@@ -1,12 +1,18 @@
-export interface CalendarEvent {
+export type EventCategory = 'meeting' | 'training' | 'campaign' | 'holiday' | 'other';
+
+export interface CalendarEventType {
   id: string;
   title: string;
   description?: string;
-  startDate: string;
-  endDate: string;
+  category: EventCategory;
+  eventDate: string;
+  startTime: string;
+  endTime: string;
   location?: string;
   createdAt: string;
 }
+
+export type CalendarEvent = CalendarEventType;
 
 export interface WorkSchedule {
   id: string;
@@ -19,8 +25,10 @@ export interface WorkSchedule {
 export interface CreateCalendarEventPayload {
   title: string;
   description?: string;
-  startDate: string;
-  endDate: string;
+  category: EventCategory;
+  eventDate: string;
+  startTime: string;
+  endTime: string;
   location?: string;
 }
 

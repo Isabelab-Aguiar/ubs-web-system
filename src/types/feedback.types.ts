@@ -1,19 +1,25 @@
-export type FeedbackType = 'compliment' | 'suggestion' | 'complaint';
-export type FeedbackStatus = 'pending' | 'in_review' | 'resolved';
+export type FeedbackKind = 'praise' | 'complaint' | 'suggestion';
+export type FeedbackStatus = 'pending' | 'reviewed' | 'resolved';
 
-export interface Feedback {
+export interface FeedbackType {
   id: string;
-  type: FeedbackType;
-  content: string;
-  authorName: string;
+  type: FeedbackKind;
+  message: string;
+  authorName?: string;
+  authorEmail?: string;
+  isAnonymous: boolean;
   status: FeedbackStatus;
   createdAt: string;
 }
 
+export type Feedback = FeedbackType;
+
 export interface CreateFeedbackPayload {
-  type: FeedbackType;
-  content: string;
-  authorName: string;
+  type: FeedbackKind;
+  message: string;
+  authorName?: string;
+  authorEmail?: string;
+  isAnonymous?: boolean;
 }
 
 export interface UpdateFeedbackStatusPayload {

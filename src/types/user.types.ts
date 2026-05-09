@@ -1,12 +1,15 @@
 import { UserRole } from './auth.types';
 
-export interface User {
+export interface UserType {
   id: string;
   name: string;
   email: string;
   role: UserRole;
+  isActive: boolean;
   createdAt: string;
 }
+
+export type User = UserType;
 
 export interface CreateUserPayload {
   name: string;

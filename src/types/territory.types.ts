@@ -1,12 +1,4 @@
-export interface MicroArea {
-  id: string;
-  name: string;
-  description?: string;
-  acsAgentId?: string;
-  createdAt: string;
-}
-
-export interface AcsAgent {
+export interface AcsAgentType {
   id: string;
   name: string;
   phone: string;
@@ -14,8 +6,23 @@ export interface AcsAgent {
   createdAt: string;
 }
 
-export interface CreateMicroAreaPayload {
+export interface MicroAreaType {
+  id: string;
+  code: string;
   name: string;
+  streets: string[];
+  description?: string;
+  acsAgents?: AcsAgentType[];
+  createdAt: string;
+}
+
+export type MicroArea = MicroAreaType;
+export type AcsAgent = AcsAgentType;
+
+export interface CreateMicroAreaPayload {
+  code: string;
+  name: string;
+  streets?: string[];
   description?: string;
 }
 
