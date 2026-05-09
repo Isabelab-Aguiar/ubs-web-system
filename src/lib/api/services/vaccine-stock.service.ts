@@ -18,6 +18,11 @@ export const vaccineStockService = {
     return data;
   },
 
+  update: async (id: string, payload: CreateVaccineStockPayload): Promise<VaccineStock> => {
+    const { data } = await api.patch<VaccineStock>(`/vaccine-stock/${id}`, payload);
+    return data;
+  },
+
   updateQuantity: async (
     id: string,
     payload: UpdateVaccineQuantityPayload,

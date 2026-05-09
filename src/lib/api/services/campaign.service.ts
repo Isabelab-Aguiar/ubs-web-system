@@ -12,6 +12,11 @@ export const campaignService = {
     return data;
   },
 
+  update: async (id: string, payload: CreateCampaignPayload): Promise<Campaign> => {
+    const { data } = await api.patch<Campaign>(`/campaigns/${id}`, payload);
+    return data;
+  },
+
   remove: async (id: string): Promise<void> => {
     await api.delete(`/campaigns/${id}`);
   },

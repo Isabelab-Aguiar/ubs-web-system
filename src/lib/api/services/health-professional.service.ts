@@ -15,6 +15,14 @@ export const healthProfessionalService = {
     return data;
   },
 
+  update: async (
+    id: string,
+    payload: CreateHealthProfessionalPayload,
+  ): Promise<HealthProfessional> => {
+    const { data } = await api.patch<HealthProfessional>(`/health-professionals/${id}`, payload);
+    return data;
+  },
+
   remove: async (id: string): Promise<void> => {
     await api.delete(`/health-professionals/${id}`);
   },
