@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import {
   Activity,
   Users,
@@ -9,54 +12,11 @@ import {
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-
-interface StatCard {
-  label: string;
-  value: string;
-  change?: string;
-  trend?: 'up' | 'down' | 'warn';
-  icon: React.ElementType;
-  iconBg: string;
-  iconColor: string;
-}
-
-const STATS: StatCard[] = [
-  {
-    label: 'Atendimentos Hoje',
-    value: '—',
-    icon: Activity,
-    iconBg: 'bg-primary-50',
-    iconColor: 'text-primary-600',
-  },
-  {
-    label: 'Profissionais Ativos',
-    value: '—',
-    icon: Users,
-    iconBg: 'bg-accent-50',
-    iconColor: 'text-accent-600',
-  },
-  {
-    label: 'Vacinas em Estoque',
-    value: '—',
-    icon: FlaskConical,
-    iconBg: 'bg-warning-50',
-    iconColor: 'text-warning-700',
-  },
-  {
-    label: 'Avisos Publicados',
-    value: '—',
-    icon: Megaphone,
-    iconBg: 'bg-info-50',
-    iconColor: 'text-info-700',
-  },
-];
-
-const RECENT_DEMANDS = [
-  { patient: 'Maria Silva', complaint: 'Hipertensão', priority: 'urgent', time: '09:30' },
-  { patient: 'João Santos', complaint: 'Consulta de rotina', priority: 'normal', time: '10:15' },
-  { patient: 'Ana Oliveira', complaint: 'Renovação de receita', priority: 'low', time: '11:00' },
-  { patient: 'Pedro Costa', complaint: 'Dor de cabeça', priority: 'high', time: '11:45' },
-];
+import { announcementService } from '@/lib/api/services/announcement.service';
+import { vaccineStockService } from '@/lib/api/services/vaccine-stock.service';
+import { spontaneousDemandService } from '@/lib/api/services/spontaneous-demand.service';
+import { healthProfessionalService } from '@/lib/api/services/health-professional.service';
+import type { SpontaneousDemand } from '@/types/spontaneous-demand.types';
 
 const PRIORITY_BADGE: Record<
   string,
@@ -64,7 +24,7 @@ const PRIORITY_BADGE: Record<
 > = {
   urgent: { label: 'Urgente', variant: 'danger' },
   high: { label: 'Alta', variant: 'warning' },
-  normal: { label: 'Normal', variant: 'info' },
+  medium: { label: 'Normal', variant: 'info' },
   low: { label: 'Baixa', variant: 'neutral' },
 };
 
@@ -74,18 +34,119 @@ const STATUS_ITEMS = [
   { label: 'Documentação API', status: 'Online', icon: CheckCircle2, color: 'text-success-500' },
 ];
 
+interface Stats {
+  atendimentos: string;
+  profissionais: string;
+  vacinas: string;
+  avisos: string;
+}
+
 export default function DashboardPage() {
+  const [stats, setStats] = useState<Stats>({
+    atendimentos: '—',
+    profissionais: '—',
+    vacinas: '—',
+    avisos: '—',
+  });
+  const [recentDemands, setRecentDemands] = useState<SpontaneousDemand[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadDashboard() {
+      const today = new Date().toISOString().split('T')[0];
+
+      const [announcementsResult, vaccineResult, demandsResult, professionalsResult] =
+        await Promise.allSettled([
+          announcementService.list(),
+          vaccineStockService.list(),
+          spontaneousDemandService.list(),
+          healthProfessionalService.list(),
+        ]);
+
+      const newStats: Stats = {
+        atendimentos: '—',
+        profissionais: '—',
+        vacinas: '—',
+        avisos: '—',
+      };
+
+      if (announcementsResult.status === 'fulfilled') {
+        const active = announcementsResult.value.filter((a) => a.isActive);
+        newStats.avisos = String(active.length);
+      }
+
+      if (vaccineResult.status === 'fulfilled') {
+        newStats.vacinas = String(vaccineResult.value.length);
+      }
+
+      if (demandsResult.status === 'fulfilled') {
+        const todayDemands = demandsResult.value.filter((d) => d.createdAt.split('T')[0] === today);
+        newStats.atendimentos = String(todayDemands.length);
+
+        const sorted = [...demandsResult.value].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
+        setRecentDemands(sorted.slice(0, 4));
+      }
+
+      if (professionalsResult.status === 'fulfilled') {
+        const active = professionalsResult.value.filter((p) => p.isActive);
+        newStats.profissionais = String(active.length);
+      }
+
+      setStats(newStats);
+      setIsLoading(false);
+    }
+
+    loadDashboard();
+  }, []);
+
+  const statCards = [
+    {
+      label: 'Atendimentos Hoje',
+      value: stats.atendimentos,
+      icon: Activity,
+      iconBg: 'bg-primary-50',
+      iconColor: 'text-primary-600',
+    },
+    {
+      label: 'Profissionais Ativos',
+      value: stats.profissionais,
+      icon: Users,
+      iconBg: 'bg-accent-50',
+      iconColor: 'text-accent-600',
+    },
+    {
+      label: 'Vacinas em Estoque',
+      value: stats.vacinas,
+      icon: FlaskConical,
+      iconBg: 'bg-warning-50',
+      iconColor: 'text-warning-700',
+    },
+    {
+      label: 'Avisos Publicados',
+      value: stats.avisos,
+      icon: Megaphone,
+      iconBg: 'bg-info-50',
+      iconColor: 'text-info-700',
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
-        {STATS.map(({ label, value, icon: Icon, iconBg, iconColor }) => (
+        {statCards.map(({ label, value, icon: Icon, iconBg, iconColor }) => (
           <Card key={label} padding="md" hover>
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-semibold text-neutral-400 mb-3 uppercase tracking-wide">
                   {label}
                 </p>
-                <p className="text-3xl font-black text-neutral-900">{value}</p>
+                {isLoading ? (
+                  <div className="h-9 w-16 rounded-lg bg-neutral-100 animate-pulse" />
+                ) : (
+                  <p className="text-3xl font-black text-neutral-900">{value}</p>
+                )}
               </div>
               <div
                 className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${iconBg}`}
@@ -110,34 +171,54 @@ export default function DashboardPage() {
           </div>
 
           <div className="divide-y divide-neutral-50">
-            {RECENT_DEMANDS.map((item) => {
-              const badge = PRIORITY_BADGE[item.priority];
-              return (
-                <div
-                  key={item.patient}
-                  className="flex items-center justify-between px-6 py-4 hover:bg-neutral-50/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-primary-50 flex items-center justify-center shrink-0">
-                      <span className="text-primary-600 text-sm font-bold">
-                        {item.patient.charAt(0)}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-neutral-800">{item.patient}</p>
-                      <p className="text-xs text-neutral-400">{item.complaint}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Badge variant={badge.variant}>{badge.label}</Badge>
-                    <div className="flex items-center gap-1 text-neutral-400">
-                      <Clock size={12} />
-                      <span className="text-xs">{item.time}</span>
-                    </div>
+            {isLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-6 py-4">
+                  <div className="w-9 h-9 rounded-full bg-neutral-100 animate-pulse shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 w-32 rounded bg-neutral-100 animate-pulse" />
+                    <div className="h-3 w-48 rounded bg-neutral-100 animate-pulse" />
                   </div>
                 </div>
-              );
-            })}
+              ))
+            ) : recentDemands.length === 0 ? (
+              <div className="px-6 py-8 text-center text-sm text-neutral-400">
+                Nenhum atendimento registrado.
+              </div>
+            ) : (
+              recentDemands.map((item) => {
+                const badge = PRIORITY_BADGE[item.priority] ?? PRIORITY_BADGE.low;
+                const time = new Date(item.createdAt).toLocaleTimeString('pt-BR', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                });
+                return (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between px-6 py-4 hover:bg-neutral-50/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-primary-50 flex items-center justify-center shrink-0">
+                        <span className="text-primary-600 text-sm font-bold">
+                          {item.patientName.charAt(0)}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-neutral-800">{item.patientName}</p>
+                        <p className="text-xs text-neutral-400">{item.chiefComplaint}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Badge variant={badge.variant}>{badge.label}</Badge>
+                      <div className="flex items-center gap-1 text-neutral-400">
+                        <Clock size={12} />
+                        <span className="text-xs">{time}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </Card>
 
